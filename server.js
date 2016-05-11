@@ -107,34 +107,31 @@ app.put('/todos/:id', function (req, res) {
     var todoId  = parseInt(req.params.id,10);
     var body = _.pick(req.body,'description', 'completed') ;
     console.log(" Update object : " + JSON.stringify(body) + ' id ' + todoId);
-    var validAttributes = {};
+    var attributes = {};
+    
+    if (body.hasOwnProperty('completed')) {
+        attributes.completed = body.completed;
+        } 
+    
+    if (body.hasOwnProperty('description')) {
+        attributes.description = body.description;
+    }
+    
     
      getTodoById(todoId).then(
         function (todo) {
             // update item
-          if (body.hasOwnProperty('completed') && _.isBoolean(body.completed)) {
-                validAttributes.completed = body.completed;
-            } else if (body.hasOwnProperty('completed')) {
-                return res.status(400).send();
-            } 
-            
-            if (body.hasOwnProperty('description') && _.isString(body.description) && body.description.trim().length > 0) {
-                validAttributes.description = body.description;
-            } else if (body.hasOwnProperty('description')) {
-                return res.status(400).send();
-            } 
-            
-            console.log('Valid attributes: ' + JSON.stringify(validAttributes));
-            
-          //  todo.description = validAttributes.description;
-          //  todo.completed = validAttributes.completed;
-          // _.extend copies source object to new object, replacing exiting props  
-            _.extend(todo,validAttributes);
-            res.json(todo);
+                if (todo) {
+                    todo.update(attributes).then(function (todo) { 
+                        res.json(todo.toJSON());
+                        }, function (e) {
+                            res.status(400).json(e);
+                        });
+                } 
             },
         function (error) {
             //not found
-            return res.status(404).json(error);
+            res.status(404).json(error);
             }
      );
     
