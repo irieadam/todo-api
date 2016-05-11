@@ -85,19 +85,22 @@ app.post('/todos', function(req, res){
 
 app.delete('/todos/:id', function (req, res) {
      var todoId  = parseInt(req.params.id,10);
-     
-     getTodoById(todoId).then(
-        function (todo) {
-            //remove item
-            todos = _.without(todos,todo);
-            res.json(todo);
-            },
-        function (error) {
-            //not found
-            res.status(404).json(error);
+        db.todo.destroy({
+            where : {
+                id: todoId
             }
-     );
-    
+        }).then(function (rowsDeleted) {
+             if (rowsDeleted === 0) {
+                 res.status(404).json({
+                     error : 'no todo found'
+                 });
+             } else {
+                res.status(204).send();    
+             }
+        } ,function () {
+            res.status(500).send();  
+          }
+     );  
 });
 
 app.put('/todos/:id', function (req, res) {
