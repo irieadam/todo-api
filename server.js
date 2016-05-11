@@ -20,21 +20,25 @@ app.get('/', function (req, res) {
 // ? q = searchstring
 app.get('/todos', function (req, res) {
     var queryParams = req.query;
-    var filteredTodos = todos;
+    var where = {};
     
     if (queryParams.hasOwnProperty('completed') && queryParams.completed === 'true') {
-        filteredTodos = _.where(filteredTodos, {completed : true});
-    }  else if (queryParams.hasOwnProperty('completed') &&  queryParams.completed === 'false') {
-        filteredTodos = _.where(filteredTodos, {completed : false});
+        where.completed = true; 
+    } else if (queryParams.hasOwnProperty('completed') &&  queryParams.completed === 'false') {
+        where.completed = false;
     };
     
-    if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0){
-        filteredTodos = _.filter(filteredTodos, function (todo) {
-            return todo.description.toLowerCase.indexOf(queryParams.q.toLowerCase) > -1;
-        }
-        );
-    }
-    res.json(filteredTodos);
+    if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {
+        where.description =  {
+                $like : '%'+queryParams.q+'%'
+        }; 
+    } ;
+    
+    db.todo.findAll({where : where}).then(function (todos) { 
+        res.json(todos);
+    }, function (e) {
+        res.status(500).send()
+    });
 });
 
 // get by id
@@ -42,16 +46,16 @@ app.get('/todos/:id', function (req, res) {
     var todoId = parseInt(req.params.id,10);
     console.log('got id :' + todoId);
 
-    getTodoById(todoId).then(
+   getTodoById(todoId).then(
         function (todo) {
             res.json(todo);
-            },
+        },
         function (error) {
             //not found
-            console.log('error: ' + error );
+            console.log('error: ' + error);
             res.status(404).send();
-            }
-     );
+        }
+    ); 
 
 });
 
@@ -142,15 +146,26 @@ db.sequelize.sync({
 
 function getTodoById(id) {
     return new Promise(function (resolve, reject) {
-        var todo;
-           
+       // var todo;
+        
+        db.todo.findById(id).then(function (todo){
+            if(!!todo) {
+                resolve(todo);
+            }  else {
+                reject('Id ' + id + ' Not found');
+            }
+        }, function(error){
+            reject(error);
+        });
+/*           
         todo = _.findWhere(todos,{id: id});
         if (todo) {
             resolve(todo);
         }
         else { 
             reject('Id ' + id + ' Not found'); 
-        };
+        }; */
     })
+   
 }
 
