@@ -70,7 +70,35 @@ module.exports = function (sequelize, DataTypes) {
                         });
                     }
                 
-                )}
+                )},
+              findByToken: function (token) {
+                  return new Promise(function(resolve, reject) {
+                      
+                        try { 
+                           
+                            var decodedJWT = jwt.verify(token,'hello');                
+                            var bytes = cryptojs.AES.decrypt(decodedJWT.token, 'abc123!'); 
+                            var tokenData = JSON.parse(bytes.toString(cryptojs.enc.Utf8)); 
+                            user.findById(tokenData.id).then(
+                                function(user){
+                                    if (user){
+                                        
+                                        resolve(user);
+                                    } else {
+                                        reject();   
+                                    };
+                                },
+                                function(e){
+                                    reject();
+                                    }
+                              );   
+                            }catch (e){
+                                console.error(e);
+                                reject();
+                            }
+                        
+                    });
+                }  
         },
         instanceMethods:  {
             toPublicJSON: function () {
@@ -83,7 +111,7 @@ module.exports = function (sequelize, DataTypes) {
                 }
                 
                 try {
-                    var stringData = JSON.stringify({is : this.get('id'), type: type});
+                    var stringData = JSON.stringify({id : this.get('id'), type: type});
                     var encryptedData = cryptojs.AES.encrypt(stringData, 'abc123!').toString();   
                     var token = jwt.sign({
                         token : encryptedData
