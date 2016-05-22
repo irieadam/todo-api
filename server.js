@@ -37,6 +37,8 @@ app.get('/todos', middleware.requireAuthentication ,function (req, res) {
         }; 
     } ;
     
+   where.userId = req.user.id;
+    
     db.todo.findAll({where : where}).then(function (todos) { 
         res.json(todos);
     }, function (e) {
@@ -49,14 +51,17 @@ app.get('/todos/:id', middleware.requireAuthentication , function (req, res) {
     var todoId = parseInt(req.params.id,10);
     console.log('got id :' + todoId);
 
-   getTodoById(todoId).then(
+   getTodoById(todoId,req.user.id).then(
         function (todo) {
             res.json(todo);
         },
         function (error) {
             //not found
             console.log('error: ' + error);
-            res.status(404).send();
+            if (error === '401') {res.status(401).send();}
+                else {
+                    res.status(404).send();
+                };
         }
     ); 
 
@@ -72,7 +77,12 @@ app.post('/todos' , middleware.requireAuthentication , function(req, res){
     
     db.todo.create(body)
     .then(function (todo) {
-        res.json(todo.toJSON());
+        req.user.addTodo(todo).then(function (todo) {
+            return todo.reload();
+        }).then(function () {
+            res.json(todo.toJSON());
+        });
+        
     } ).catch(function (e){
         res.status(400).json(e);
     })
@@ -122,7 +132,7 @@ app.put('/todos/:id', middleware.requireAuthentication , function (req, res) {
     }
     
     
-     getTodoById(todoId).then(
+     getTodoById(todoId,req.user.id).then(
         function (todo) {
             // update item
                 if (todo) {
@@ -134,8 +144,11 @@ app.put('/todos/:id', middleware.requireAuthentication , function (req, res) {
                 } 
             },
         function (error) {
-            //not found
-            res.status(404).json(error);
+            console.log('/');
+             if (error === '401') {res.status(401).send();}
+                else {
+                    res.status(404).send();
+                };
             }
      );
     
@@ -171,7 +184,6 @@ app.post('/users/login', function(req, res){
 });
 
 
-
 db.sequelize.sync({
     force : false}).then(function () {
             app.listen(PORT, function () {
@@ -179,27 +191,24 @@ db.sequelize.sync({
             });   
 });
 
-function getTodoById(id) {
+function getTodoById(id,userId) {
     return new Promise(function (resolve, reject) {
        // var todo;
         
         db.todo.findById(id).then(function (todo){
             if(!!todo) {
-                resolve(todo);
-            }  else {
+                if (todo.userId === userId) {
+                 resolve(todo);
+                } else {
+                    reject('401');
+                }
+            }
+            else {
                 reject('Id ' + id + ' Not found');
             }
         }, function(error){
             reject(error);
         });
-/*           
-        todo = _.findWhere(todos,{id: id});
-        if (todo) {
-            resolve(todo);
-        }
-        else { 
-            reject('Id ' + id + ' Not found'); 
-        }; */
     })
    
 }
