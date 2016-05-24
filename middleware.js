@@ -23,6 +23,7 @@ module.exports = function (db) {
                     res.status(401).send();
                 });
 
+
             /*             db.user.findByToken(token).then(
                              function (user) {
                                  req.user = user;
